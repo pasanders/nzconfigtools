@@ -15,8 +15,15 @@ from pathlib import Path
 class NikonZMenuEditor:
     def __init__(self, root):
         self.root = root
-        self.root.title("Nikon Z Camera Menu Editor")
+        self.root.title("Nikon Z Camera Menu Editor (Updated)")
         self.root.geometry("1200x800")
+        
+        # Apply theme to ensure tabs are visible
+        style = ttk.Style()
+        try:
+            style.theme_use('clam')
+        except:
+            pass
         
         # Data storage
         self.current_file = None
@@ -47,8 +54,8 @@ class NikonZMenuEditor:
             56: "AF-assist illuminator", 57: "Beep options", 58: "Touch controls",
             59: "Eye-Detection AF", 60: "Animal-Detection AF", 61: "Subject tracking",
             62: "Wide-area AF (L)", 63: "Wide-area AF (S)", 64: "Auto-area AF",
-            65: "Pinpoint AF", 66: "Single-point AF", 67: "Dynamic-area AF",
-            68: "3D-tracking", 69: "Group-area AF", 70: "Auto ISO sensitivity control",
+            65: "Pinpoint AF", 66: "Airplane mode", 67: "Dynamic-area AF",
+            68: "3D-tracking", 69: "Group-area AF", 70: "Tone mode",
             71: "Spot metering", 72: "Center-weighted metering", 73: "Flash sync speed",
             74: "Flash control mode", 75: "Wireless flash control", 76: "Built-in flash mode",
             77: "Commander mode", 78: "Remote flash control", 79: "TTL flash mode",
@@ -162,6 +169,12 @@ class NikonZMenuEditor:
         
         # Other settings tab
         self.setup_other_settings_tab()
+
+        # Custom Settings tab
+        self.setup_custom_settings_tab()
+
+        # Raw Data tab
+        self.setup_raw_data_tab()
         
         # Status bar
         self.status_var = tk.StringVar()
@@ -173,6 +186,51 @@ class NikonZMenuEditor:
         self.file_menu = file_menu
         self.tools_menu = tools_menu
         
+    def setup_custom_settings_tab(self):
+        """Setup the Custom Settings tab"""
+        custom_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(custom_frame, text="Custom Settings")
+        
+        # Instructions
+        ttk.Label(custom_frame, text="Custom Settings (Reverse Engineered)", 
+                 font=("TkDefaultFont", 10, "bold")).grid(row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 5))
+        
+        ttk.Label(custom_frame, text="These settings have been identified by comparing file dumps.", 
+                 foreground="gray").grid(row=1, column=0, columnspan=2, sticky=tk.W, pady=(0, 15))
+        
+        # a1 AF-C Priority Selection
+        ttk.Label(custom_frame, text="a1 AF-C Priority Selection:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        
+        self.a1_var = tk.StringVar()
+        self.a1_combo = ttk.Combobox(custom_frame, textvariable=self.a1_var, state="readonly", width=30)
+        self.a1_combo['values'] = ("Release", "Focus")
+        self.a1_combo.grid(row=2, column=1, sticky=tk.W, padx=10, pady=5)
+        self.a1_combo.bind('<<ComboboxSelected>>', self.on_custom_setting_change)
+        
+        # d2 Max continuous release
+        ttk.Label(custom_frame, text="d2 Max continuous release:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        
+        self.d2_var = tk.StringVar()
+        # Range 1-200, but let's use an entry for flexibility or a spinbox
+        self.d2_spin = ttk.Spinbox(custom_frame, from_=1, to=200, textvariable=self.d2_var, width=10)
+        self.d2_spin.grid(row=3, column=1, sticky=tk.W, padx=10, pady=5)
+        self.d2_spin.bind('<KeyRelease>', self.on_custom_setting_change)
+        self.d2_spin.bind('<<Increment>>', self.on_custom_setting_change)
+        self.d2_spin.bind('<<Decrement>>', self.on_custom_setting_change)
+        
+        # e1 Flash sync speed
+        ttk.Label(custom_frame, text="e1 Flash sync speed:").grid(row=4, column=0, sticky=tk.W, pady=5)
+        
+        self.e1_var = tk.StringVar()
+        self.e1_combo = ttk.Combobox(custom_frame, textvariable=self.e1_var, state="readonly", width=30)
+        self.e1_combo['values'] = ("1/200 s", "1/160 s")
+        self.e1_combo.grid(row=4, column=1, sticky=tk.W, padx=10, pady=5)
+        self.e1_combo.bind('<<ComboboxSelected>>', self.on_custom_setting_change)
+        
+        # Add more custom settings here as they are found
+        
+        custom_frame.columnconfigure(1, weight=1)
+        
     def setup_imenu_tab(self):
         """Setup the i-menu configuration tab"""
         imenu_frame = ttk.Frame(self.notebook, padding="10")
@@ -180,63 +238,57 @@ class NikonZMenuEditor:
         
         # Instructions
         ttk.Label(imenu_frame, text="Configure the 12 slots in your camera's i-menu:", 
-                 font=("TkDefaultFont", 10, "bold")).grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=(0, 5))
+                 font=("TkDefaultFont", 10, "bold")).grid(row=0, column=0, columnspan=6, sticky=tk.W, pady=(0, 5))
         
-        # Enhanced explanation based on Z5 Mark 2 Reference Guide
-        explanation_text = ("The i-menu provides quick access to frequently used settings. Press the 'i' button on your camera "
-                          "to access this 3×4 grid of customizable functions. Each shooting mode (P, S, A, M, U1, U2, U3) "
-                          "can have its own i-menu configuration. Available options include focus settings, exposure controls, "
-                          "image quality settings, custom functions, and more.")
+        # Enhanced explanation
+        explanation_text = ("The i-menu provides quick access to frequently used settings. "
+                          "Configure the 2x6 grid below to match your camera's screen.")
         ttk.Label(imenu_frame, text=explanation_text, wraplength=700, foreground="gray", 
-                 font=("TkDefaultFont", 9)).grid(row=1, column=0, columnspan=3, sticky=tk.W, pady=(0, 15))
+                 font=("TkDefaultFont", 9)).grid(row=1, column=0, columnspan=6, sticky=tk.W, pady=(0, 15))
         
-        # i-menu slots
+        # i-menu slots - Visual 2x6 Grid
         self.imenu_vars = []
         self.imenu_combos = []
         
         # Create sorted list of i-menu options
         imenu_options = ["(Empty)"] + [f"{name} ({id})" for id, name in sorted(self.imenu_names.items())]
         
+        # Grid Container
+        grid_frame = ttk.Frame(imenu_frame)
+        grid_frame.grid(row=2, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=10)
+        
+        # Row Headers
+        ttk.Label(grid_frame, text="Top Row:", font=("TkDefaultFont", 9, "bold")).grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Label(grid_frame, text="Bottom Row:", font=("TkDefaultFont", 9, "bold")).grid(row=2, column=0, sticky=tk.W, pady=5)
+        
         for i in range(12):
-            row = 2 + (i // 3)
-            col = (i % 3) * 2
+            # 2x6 Grid Layout
+            # Row 0 (Header) -> Row 1 (Combos)
+            # Row 2 (Header) -> Row 3 (Combos)
             
-            # Slot label with position indicator
-            position_text = f"Position {i+1} (Row {(i//3)+1}, Col {(i%3)+1}):"
-            ttk.Label(imenu_frame, text=position_text).grid(row=row, column=col, sticky=tk.W, padx=(0, 5))
+            is_top_row = i < 6
+            grid_row = 1 if is_top_row else 3
+            col = i % 6
             
             # Combo box for selection
             var = tk.StringVar()
-            combo = ttk.Combobox(imenu_frame, textvariable=var, values=imenu_options, width=25, state="readonly")
-            combo.grid(row=row, column=col+1, sticky=(tk.W, tk.E), padx=(0, 20), pady=2)
+            combo = ttk.Combobox(grid_frame, textvariable=var, values=imenu_options, width=18, state="readonly")
+            combo.grid(row=grid_row, column=col, sticky=(tk.W, tk.E), padx=2, pady=2)
             combo.bind('<<ComboboxSelected>>', lambda e, slot=i: self.on_imenu_change(slot))
             
             self.imenu_vars.append(var)
             self.imenu_combos.append(combo)
             
-        # Configure column weights
-        for i in range(6):
-            imenu_frame.columnconfigure(i, weight=1 if i % 2 == 1 else 0)
-        
-        # Add visual layout representation
-        layout_frame = ttk.LabelFrame(imenu_frame, text="i-menu Layout on Camera Screen", padding="5")
-        layout_frame.grid(row=6, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=(20, 0))
-        
-        # Create visual grid showing how the i-menu appears on camera
-        self.layout_labels = []
-        for i in range(12):
-            row = (i // 3)
-            col = (i % 3)
+            # Column Header (1-6)
+            if is_top_row:
+                ttk.Label(grid_frame, text=f"{i+1}", anchor="center").grid(row=grid_row-1, column=col, sticky=(tk.W, tk.E))
             
-            label = ttk.Label(layout_frame, text=f"Pos {i+1}\n(Empty)", 
-                            relief="solid", borderwidth=1, width=20, anchor="center",
-                            font=("TkDefaultFont", 8))
-            label.grid(row=row, column=col, padx=2, pady=2, sticky=(tk.W, tk.E))
-            self.layout_labels.append(label)
-        
-        # Configure layout frame columns
-        for i in range(3):
-            layout_frame.columnconfigure(i, weight=1)
+        # Configure column weights for grid frame
+        for i in range(6):
+            grid_frame.columnconfigure(i, weight=1)
+            
+        # Configure main frame weights
+        imenu_frame.columnconfigure(0, weight=1)
     
     def setup_user_settings_tab(self):
         """Setup the User Settings (U1, U2, U3) management tab"""
@@ -341,6 +393,32 @@ class NikonZMenuEditor:
         other_frame.columnconfigure(0, weight=1)
         other_frame.rowconfigure(1, weight=1)
     
+    def setup_raw_data_tab(self):
+        """Setup the Raw Data Inspector tab"""
+        raw_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(raw_frame, text="Raw Data")
+        
+        # Instructions
+        ttk.Label(raw_frame, text="Raw Configuration Data Inspector", 
+                 font=("TkDefaultFont", 10, "bold")).grid(row=0, column=0, sticky=tk.W, pady=(0, 5))
+        
+        explanation_text = ("This view shows the raw hexadecimal and ASCII data for the currently selected mode. "
+                          "This allows you to inspect settings that are not yet fully decoded.")
+        ttk.Label(raw_frame, text=explanation_text, wraplength=700, foreground="gray", 
+                 font=("TkDefaultFont", 9)).grid(row=1, column=0, sticky=tk.W, pady=(0, 10))
+        
+        # Text widget for hex dump
+        self.raw_text = tk.Text(raw_frame, height=20, width=90, font=("Courier", 9))
+        scrollbar = ttk.Scrollbar(raw_frame, orient="vertical", command=self.raw_text.yview)
+        self.raw_text.configure(yscrollcommand=scrollbar.set)
+        
+        self.raw_text.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        scrollbar.grid(row=2, column=1, sticky=(tk.N, tk.S))
+        
+        # Configure weights
+        raw_frame.columnconfigure(0, weight=1)
+        raw_frame.rowconfigure(2, weight=1)
+    
     def open_file(self):
         """Open a camera menu file"""
         filename = filedialog.askopenfilename(
@@ -395,6 +473,7 @@ class NikonZMenuEditor:
             # Update UI
             self.populate_mode_list()
             self.enable_menus()
+            self.load_custom_settings()
             
             self.status_var.set(f"Loaded: {os.path.basename(filename)} - {len(self.config_sections)} modes found")
             
@@ -405,8 +484,8 @@ class NikonZMenuEditor:
         """Find and analyze configuration sections in the file"""
         self.config_sections = {}
         
-        # First try standard offsets (Z5 Mark 1)
-        standard_sections = [
+        # Z5 Mark 1 Standard Offsets
+        standard_sections_mk1 = [
             (169824, "Primary M/A/S/P/Auto"),
             (176452, "Secondary M/A/S/P/Auto"), 
             (183080, "U1"),
@@ -414,7 +493,41 @@ class NikonZMenuEditor:
             (196336, "U3")
         ]
         
-        for offset, name in standard_sections:
+        # Z5 Mark 2 Standard Offsets (Corrected: Match - 924)
+        standard_sections_mk2 = [
+            (250612, "M/A/S/P Settings (Main)"),
+            (272312, "M/A/S/P Settings (Backup)"),
+            (294012, "U1"),
+            (315712, "U2"),
+            (337412, "U3")
+        ]
+        
+        # Try Mark 2 first (since that's what the user has)
+        mk2_found = False
+        for offset, name in standard_sections_mk2:
+            if self.is_valid_config_section(offset):
+                mk2_found = True
+                # For Mk2, Mode ID might be at a different location or we just assume based on order
+                # The analysis showed Mode ID at offset + 316
+                mode_id_offset = offset + 316
+                if mode_id_offset < len(self.file_data):
+                    mode_id = self.file_data[mode_id_offset]
+                else:
+                    mode_id = 0
+                
+                mode_name = self.mode_names.get(mode_id, f"Unknown Mode {mode_id}")
+                self.config_sections[f"{name} ({mode_name})"] = {
+                    'offset': offset,
+                    'mode_id': mode_id,
+                    'mode_name': mode_name,
+                    'source': 'standard_mk2'
+                }
+        
+        if mk2_found:
+            return
+
+        # If not Mk2, try Mk1
+        for offset, name in standard_sections_mk1:
             if self.is_valid_config_section(offset):
                 mode_id = self.file_data[offset + 1240]
                 mode_name = self.mode_names.get(mode_id, f"Unknown Mode {mode_id}")
@@ -422,10 +535,10 @@ class NikonZMenuEditor:
                     'offset': offset,
                     'mode_id': mode_id,
                     'mode_name': mode_name,
-                    'source': 'standard'
+                    'source': 'standard_mk1'
                 }
         
-        # If no standard sections found, use auto-detection (Z5 Mark 2)
+        # If no standard sections found, use auto-detection
         if not self.config_sections:
             self.auto_detect_sections()
     
@@ -553,8 +666,8 @@ class NikonZMenuEditor:
                 else:
                     self.imenu_vars[i].set(f"Unknown/Invalid ({item_id})")
         
-        # Update visual layout
-        self.update_imenu_layout()
+        # Update visual layout (No longer needed as the combos ARE the layout)
+        # self.update_imenu_layout()
         
         # Load file prefix
         prefix_offset = offset + 1540
@@ -568,6 +681,69 @@ class NikonZMenuEditor:
                 self.prefix_var.set(prefix)
             except UnicodeDecodeError:
                 self.prefix_var.set("")
+        
+        # Update raw data display
+        self.update_raw_data_display(offset)
+        
+    def load_custom_settings(self):
+        """Load custom settings from file data"""
+        if not self.file_data:
+            return
+            
+        # a1 AF-C Priority Selection (Offset 1628)
+        if 1628 < len(self.file_data):
+            val = self.file_data[1628]
+            if val == 0:
+                self.a1_var.set("Release")
+            elif val == 1:
+                self.a1_var.set("Focus")
+            else:
+                self.a1_var.set(f"Unknown ({val})")
+                
+        # d2 Max continuous release (Offset 1940)
+        if 1940 < len(self.file_data):
+            val = self.file_data[1940]
+            self.d2_var.set(str(val))
+            
+        # e1 Flash sync speed (Offset 1964)
+        if 1964 < len(self.file_data):
+            val = self.file_data[1964]
+            if val == 184:
+                self.e1_var.set("1/200 s")
+            elif val == 176:
+                self.e1_var.set("1/160 s")
+            else:
+                self.e1_var.set(f"Unknown ({val})")
+                
+    def on_custom_setting_change(self, event):
+        """Handle changes to custom settings"""
+        if not self.file_data:
+            return
+            
+        # a1 AF-C Priority Selection
+        val_str = self.a1_var.get()
+        if val_str == "Release":
+            self.file_data[1628] = 0
+        elif val_str == "Focus":
+            self.file_data[1628] = 1
+            
+        # d2 Max continuous release
+        try:
+            d2_val = int(self.d2_var.get())
+            if 1 <= d2_val <= 200:
+                self.file_data[1940] = d2_val
+        except ValueError:
+            pass  # Ignore invalid input
+            
+        # e1 Flash sync speed
+        val_str = self.e1_var.get()
+        if val_str == "1/200 s":
+            self.file_data[1964] = 184
+        elif val_str == "1/160 s":
+            self.file_data[1964] = 176
+            
+        self.modified = True
+        self.update_title()
     
     def update_user_settings_display(self, section_name, section):
         """Update the User Settings tab display"""
@@ -764,29 +940,46 @@ class NikonZMenuEditor:
         # Apply change to file data
         self.apply_imenu_changes()
         
-        # Update visual layout
-        self.update_imenu_layout()
+        # Update visual layout (No longer needed)
+        # self.update_imenu_layout()
     
-    def update_imenu_layout(self):
-        """Update the visual i-menu layout representation"""
-        if not hasattr(self, 'layout_labels'):
-            return
+    def update_raw_data_display(self, offset):
+        """Update the raw data display with hex dump of current section"""
+        self.raw_text.config(state=tk.NORMAL)
+        self.raw_text.delete(1.0, tk.END)
         
-        for i in range(12):
-            value = self.imenu_vars[i].get()
-            if value == "(Empty)":
-                display_text = f"Pos {i+1}\n(Empty)"
-                bg_color = "#f0f0f0"
-            else:
-                # Extract function name (remove ID part)
-                function_name = value.split(' (')[0]
-                # Truncate if too long
-                if len(function_name) > 15:
-                    function_name = function_name[:12] + "..."
-                display_text = f"Pos {i+1}\n{function_name}"
-                bg_color = "#e6f3ff"
+        if offset + 6628 > len(self.file_data):
+            self.raw_text.insert(tk.END, "Error: Section extends beyond file end")
+            self.raw_text.config(state=tk.DISABLED)
+            return
             
-            self.layout_labels[i].config(text=display_text, background=bg_color)
+        section_data = self.file_data[offset:offset+6628]
+        
+        # Generate hex dump
+        lines = []
+        lines.append(f"Section Offset: {offset} (0x{offset:x})")
+        lines.append(f"Section Size:   6628 bytes\n")
+        lines.append("Offset   | Hex Data                                         | ASCII")
+        lines.append("-" * 78)
+        
+        for i in range(0, len(section_data), 16):
+            chunk = section_data[i:i+16]
+            
+            # Hex part
+            hex_part = " ".join(f"{b:02x}" for b in chunk)
+            padding = "   " * (16 - len(chunk))
+            
+            # ASCII part
+            ascii_part = "".join(chr(b) if 32 <= b <= 126 else "." for b in chunk)
+            
+            lines.append(f"{i:08x} | {hex_part}{padding} | {ascii_part}")
+            
+        self.raw_text.insert(tk.END, "\n".join(lines))
+        self.raw_text.config(state=tk.DISABLED)
+
+    def update_imenu_layout(self):
+        """Update the visual i-menu layout representation (Deprecated)"""
+        pass
     
     def on_prefix_change(self, event):
         """Handle file prefix change"""
@@ -1098,13 +1291,14 @@ class NikonZMenuEditor:
     def show_about(self):
         """Show about dialog"""
         about_text = """Nikon Z Camera Menu Editor
-Version 1.0
+Version 1.1 (Updated)
 
 A visual tool for editing Nikon Z camera menu settings files.
 Supports both Z5 Mark 1 and Mark 2 formats with auto-detection.
 
 Features:
 • Visual i-menu configuration
+• Raw Data Inspector (New!)
 • File prefix editing  
 • Automatic format detection
 • CRC verification

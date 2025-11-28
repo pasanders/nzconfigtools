@@ -186,11 +186,11 @@ def enhanced_dump_file(filename):
     
     # Analyze standard sections
     sections = [
-        (169824, "Primary M/A/S/P/Auto"),
-        (176452, "Secondary M/A/S/P/Auto"),
-        (183080, "U1"),
-        (189708, "U2"),
-        (196336, "U3")
+        (250612, "M/A/S/P Settings (Main)"),
+        (272312, "M/A/S/P Settings (Backup)"),
+        (294012, "U1"),
+        (315712, "U2"),
+        (337412, "U3")
     ]
     
     for offset, name in sections:
