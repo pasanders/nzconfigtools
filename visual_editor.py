@@ -539,6 +539,7 @@ class NikonZMenuEditor:
                 }
         
         # If no standard sections found, use auto-detection
+        # If no standard sections found, use auto-detection
         if not self.config_sections:
             self.auto_detect_sections()
     
