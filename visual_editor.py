@@ -197,45 +197,59 @@ class NikonZMenuEditor:
         # Create sorted list of i-menu options
         imenu_options = ["(Empty)"] + [f"{name} ({id})" for id, name in sorted(self.imenu_names.items())]
         
+        # Create frames for the two rows of settings
+        row1_frame = ttk.LabelFrame(imenu_frame, text="Top Row (Slots 1-6)", padding="5")
+        row1_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5), pady=5)
+        
+        row2_frame = ttk.LabelFrame(imenu_frame, text="Bottom Row (Slots 7-12)", padding="5")
+        row2_frame.grid(row=2, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0), pady=5)
+        
         for i in range(12):
-            row = 2 + (i // 3)
-            col = (i % 3) * 2
+            is_bottom_row = i >= 6
+            parent_frame = row2_frame if is_bottom_row else row1_frame
+            
+            # Calculate row within the frame (0-5)
+            row = i % 6
+            
+            # Camera grid position
+            cam_row = 2 if is_bottom_row else 1
+            cam_col = (i % 6) + 1
             
             # Slot label with position indicator
-            position_text = f"Position {i+1} (Row {(i//3)+1}, Col {(i%3)+1}):"
-            ttk.Label(imenu_frame, text=position_text).grid(row=row, column=col, sticky=tk.W, padx=(0, 5))
+            position_text = f"Pos {i+1} (R{cam_row}, C{cam_col}):"
+            ttk.Label(parent_frame, text=position_text).grid(row=row, column=0, sticky=tk.W, padx=(0, 5), pady=2)
             
             # Combo box for selection
             var = tk.StringVar()
-            combo = ttk.Combobox(imenu_frame, textvariable=var, values=imenu_options, width=25, state="readonly")
-            combo.grid(row=row, column=col+1, sticky=(tk.W, tk.E), padx=(0, 20), pady=2)
+            combo = ttk.Combobox(parent_frame, textvariable=var, values=imenu_options, width=25, state="readonly")
+            combo.grid(row=row, column=1, sticky=(tk.W, tk.E), pady=2)
             combo.bind('<<ComboboxSelected>>', lambda e, slot=i: self.on_imenu_change(slot))
             
             self.imenu_vars.append(var)
             self.imenu_combos.append(combo)
             
-        # Configure column weights
-        for i in range(6):
-            imenu_frame.columnconfigure(i, weight=1 if i % 2 == 1 else 0)
+        # Configure weights
+        imenu_frame.columnconfigure(0, weight=1)
+        imenu_frame.columnconfigure(1, weight=1)
         
         # Add visual layout representation
         layout_frame = ttk.LabelFrame(imenu_frame, text="i-menu Layout on Camera Screen", padding="5")
-        layout_frame.grid(row=6, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=(20, 0))
+        layout_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(20, 0))
         
-        # Create visual grid showing how the i-menu appears on camera
+        # Create visual grid showing how the i-menu appears on camera (2 rows x 6 columns)
         self.layout_labels = []
         for i in range(12):
-            row = (i // 3)
-            col = (i % 3)
+            row = (i // 6)
+            col = (i % 6)
             
             label = ttk.Label(layout_frame, text=f"Pos {i+1}\n(Empty)", 
-                            relief="solid", borderwidth=1, width=20, anchor="center",
+                            relief="solid", borderwidth=1, width=15, anchor="center",
                             font=("TkDefaultFont", 8))
             label.grid(row=row, column=col, padx=2, pady=2, sticky=(tk.W, tk.E))
             self.layout_labels.append(label)
         
         # Configure layout frame columns
-        for i in range(3):
+        for i in range(6):
             layout_frame.columnconfigure(i, weight=1)
     
     def setup_user_settings_tab(self):
@@ -405,14 +419,29 @@ class NikonZMenuEditor:
         """Find and analyze configuration sections in the file"""
         self.config_sections = {}
         
-        # First try standard offsets (Z5 Mark 1)
-        standard_sections = [
-            (169824, "Primary M/A/S/P/Auto"),
-            (176452, "Secondary M/A/S/P/Auto"), 
-            (183080, "U1"),
-            (189708, "U2"),
-            (196336, "U3")
-        ]
+        # Check camera model
+        camera_model = self.camera_label.cget("text")
+        
+        # Define offsets based on camera model
+        if "Z5_2" in camera_model:
+            # Z5 Mark 2 offsets (from analysis)
+            standard_sections = [
+                (92549, "Manual"),
+                (295672, "Program"),
+                (294104, "Aperture Priority"),
+                (294152, "U1"),
+                (294132, "U2"),
+                (294108, "U3")
+            ]
+        else:
+            # Z5 Mark 1 standard offsets
+            standard_sections = [
+                (169824, "Primary M/A/S/P/Auto"),
+                (176452, "Secondary M/A/S/P/Auto"), 
+                (183080, "U1"),
+                (189708, "U2"),
+                (196336, "U3")
+            ]
         
         for offset, name in standard_sections:
             if self.is_valid_config_section(offset):
@@ -425,7 +454,7 @@ class NikonZMenuEditor:
                     'source': 'standard'
                 }
         
-        # If no standard sections found, use auto-detection (Z5 Mark 2)
+        # If no standard sections found, use auto-detection
         if not self.config_sections:
             self.auto_detect_sections()
     
